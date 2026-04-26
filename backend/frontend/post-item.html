@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Item | ReFind</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Manrope', sans-serif; background-color: #f0f2f5; }
+        .navbar { background-color: #002045 !important; }
+        .form-container { max-width: 700px; margin: 50px auto; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .btn-primary { background-color: #002045; border-color: #002045; padding: 12px 30px; font-weight: bold; border-radius: 10px; }
+        .form-label { font-weight: 700; color: #002045; }
+        .toggle-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .toggle-btn { flex: 1; padding: 15px; text-align: center; border: 2px solid #dee2e6; border-radius: 10px; cursor: pointer; font-weight: bold; transition: all 0.3s; }
+        .toggle-btn.active-lost { background-color: #fff3cd; border-color: #ffc107; color: #856404; }
+        .toggle-btn.active-found { background-color: #d4edda; border-color: #28a745; color: #155724; }
+        .preview-image { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-top: 10px; display: none; }
+        .login-required { background: #fff3cd; border: 1px solid #ffc107; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-3" href="index.html">ReFind</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="listings.html">Browse Items</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="post-item.html">Post Item</a></li>
+                    <li class="nav-item ms-lg-3">
+                        <a class="btn btn-outline-light rounded-pill px-4" id="navLoginBtn" href="auth.html">Login</a>
+                        <div id="navUserMenu" style="display:none;">
+                            <button class="btn btn-outline-danger rounded-pill px-3" onclick="logout()">Logout</button>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container">
+            <h2 class="fw-bold text-center mb-2">Report an Item</h2>
+            <p class="text-center text-muted mb-4">Provide accurate details to help the community.</p>
+
+            <!-- Show if not logged in -->
+            <div id="loginWarning" class="login-required" style="display:none;">
+                ⚠️ You need to <a href="auth.html">log in</a> before posting an item.
+            </div>
+
+            <div id="errorAlert" class="alert alert-danger" style="display:none;"></div>
+
+            <form id="postItemForm" onsubmit="handleFormSubmit(event)">
+                <label class="form-label">Report Type</label>
+                <div class="toggle-group">
+                    <div id="lostToggle" class="toggle-btn active-lost" onclick="setReportType('lost')">I Lost Something</div>
+                    <div id="foundToggle" class="toggle-btn" onclick="setReportType('found')">I Found Something</div>
+                </div>
+                <input type="hidden" id="reportType" value="lost">
+
+                <div class="mb-4">
+                    <label class="form-label">Item Title</label>
+                    <input type="text" class="form-control form-control-lg" id="title" placeholder="e.g. Blue MacBook Pro 14 inch" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Category</label>
+                    <select class="form-select form-select-lg" id="category" required>
+                        <option value="" disabled selected>Select a category</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Location</label>
+                    <input type="text" class="form-control form-control-lg" id="location" placeholder="e.g. Main Library, 2nd Floor" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control form-control-lg" id="date" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" id="description" rows="4" placeholder="Mention unique features, brand, color, or any distinguishing marks..." required></textarea>
+                </div>
+
+                <div class="mb-5">
+                    <label class="form-label">Photo Upload <span class="text-muted fw-normal">(optional)</span></label>
+                    <input type="file" class="form-control" id="photo" accept="image/*" onchange="previewFile()">
+                    <div class="form-text">A clear photo helps significantly with identification.</div>
+                    <img id="imagePreview" src="" class="preview-image" alt="Preview">
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 btn-lg shadow" id="submitBtn">Post to Registry</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-body text-center p-5">
+                    <div style="font-size:4rem;" class="mb-3">✅</div>
+                    <h3 class="fw-bold mb-3">Report Submitted!</h3>
+                    <p class="text-muted mb-4">Your item has been logged in the ReFind registry.</p>
+                    <a href="listings.html" class="btn btn-primary rounded-pill px-5 me-2">Browse Items</a>
+                    <a href="myposts.html" class="btn btn-outline-primary rounded-pill px-5">My Posts</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="api.js"></script>
+    <script>
+        window.onload = async function () {
+            updateNavbar();
+
+            if (!isLoggedIn()) {
+                document.getElementById('loginWarning').style.display = 'block';
+                document.getElementById('submitBtn').disabled = true;
+            }
+
+            // Load categories from API
+            try {
+                const data = await getCategories();
+                const select = document.getElementById('category');
+                data.categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.category_id;
+                    opt.textContent = cat.category_name;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Could not load categories');
+            }
+
+            // Set type from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('type') === 'found') setReportType('found');
+
+            // Set today as default date
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        };
+
+        function setReportType(type) {
+            document.getElementById('lostToggle').className = 'toggle-btn' + (type === 'lost' ? ' active-lost' : '');
+            document.getElementById('foundToggle').className = 'toggle-btn' + (type === 'found' ? ' active-found' : '');
+            document.getElementById('reportType').value = type;
+        }
+
+        function previewFile() {
+            const preview = document.getElementById('imagePreview');
+            const file = document.getElementById('photo').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = () => { preview.src = reader.result; preview.style.display = 'block'; };
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = ''; preview.style.display = 'none';
+            }
+        }
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            if (!isLoggedIn()) { window.location.href = 'auth.html'; return; }
+
+            const btn = document.getElementById('submitBtn');
+            const errorDiv = document.getElementById('errorAlert');
+            errorDiv.style.display = 'none';
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Posting...';
+
+            try {
+                const formData = new FormData();
+                formData.append('title', document.getElementById('title').value);
+                formData.append('status', document.getElementById('reportType').value);
+                formData.append('category_id', document.getElementById('category').value);
+                formData.append('location_found', document.getElementById('location').value);
+                formData.append('date_reported', document.getElementById('date').value);
+                formData.append('description', document.getElementById('description').value);
+
+                const photoFile = document.getElementById('photo').files[0];
+                if (photoFile) formData.append('photo', photoFile);
+
+                await postItem(formData);
+                new bootstrap.Modal(document.getElementById('successModal')).show();
+                document.getElementById('postItemForm').reset();
+                document.getElementById('imagePreview').style.display = 'none';
+                setReportType('lost');
+
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Post to Registry';
+            }
+        }
+    </script>
+</body>
+</html>

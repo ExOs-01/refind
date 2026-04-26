@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Item Detail | ReFind</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Manrope', sans-serif; background-color: #f8f9fa; }
+        .navbar { background-color: #002045 !important; }
+        .item-photo { width: 100%; max-height: 420px; object-fit: cover; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+        .item-photo-placeholder { width: 100%; height: 420px; background: linear-gradient(135deg, #e9ecef, #dee2e6); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 6rem; }
+        .detail-card { background: white; border-radius: 20px; padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,0.07); }
+        .status-lost { background-color: #e63946; color: white; }
+        .status-found { background-color: #28a745; color: white; }
+        .status-resolved { background-color: #6c757d; color: white; }
+        .meta-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.95rem; }
+        .meta-row:last-child { border-bottom: none; }
+        .meta-icon { font-size: 1.2rem; width: 28px; text-align: center; }
+        .meta-label { color: #6c757d; font-weight: 700; min-width: 100px; }
+        .poster-card { background: #f8f9fa; border-radius: 14px; padding: 20px; margin-top: 24px; }
+        .breadcrumb-item a { color: #002045; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-3" href="index.html">ReFind</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="listings.html">Browse Items</a></li>
+                    <li class="nav-item"><a class="nav-link" href="post-item.html">Post Item</a></li>
+                    <li class="nav-item ms-lg-3">
+                        <a class="btn btn-outline-light rounded-pill px-4" id="navLoginBtn" href="auth.html">Login</a>
+                        <div id="navUserMenu" style="display:none;">
+                            <button class="btn btn-outline-danger rounded-pill px-3" onclick="logout()">Logout</button>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="index.html">Home</a></li>
+                <li class="breadcrumb-item"><a href="listings.html">Browse Items</a></li>
+                <li class="breadcrumb-item active" id="breadcrumbTitle">Item Detail</li>
+            </ol>
+        </nav>
+        <div id="loadingState" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-3 text-muted">Loading item...</p>
+        </div>
+        <div class="row g-5" id="itemDetail" style="display:none;"></div>
+        <div id="notFound" style="display:none;" class="text-center py-5">
+            <div style="font-size:4rem;">😕</div>
+            <h3 class="fw-bold mt-3">Item not found</h3>
+            <a href="listings.html" class="btn btn-primary rounded-pill px-5 mt-2">Back to Browse</a>
+        </div>
+    </div>
+
+    <div class="modal fade" id="contactModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-0"><h5 class="modal-title fw-bold">Contact Poster</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <p class="text-muted mb-4">Send a message to the person who posted this item.</p>
+                    <div class="mb-3"><label class="form-label fw-bold small">Your Name</label><input type="text" class="form-control" placeholder="Enter your name"></div>
+                    <div class="mb-3"><label class="form-label fw-bold small">Your Contact</label><input type="text" class="form-control" placeholder="your@email.com or phone number"></div>
+                    <div class="mb-3"><label class="form-label fw-bold small">Message</label><textarea class="form-control" rows="3" placeholder="Describe how you can help..."></textarea></div>
+                    <button class="btn btn-primary w-100 rounded-pill fw-bold py-3" onclick="sendContact()">Send Message</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="py-5 bg-dark text-white mt-3">
+        <div class="container text-center">
+            <h4 class="fw-bold mb-2">ReFind</h4>
+            <p class="opacity-50 small">© 2026 King's College Nepal. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="api.js"></script>
+    <script>
+        window.onload = async function () {
+            updateNavbar();
+            const id = new URLSearchParams(window.location.search).get('id');
+            if (!id) { showNotFound(); return; }
+            try {
+                const data = await getItem(id);
+                renderItem(data.item);
+            } catch (e) { showNotFound(); }
+        };
+
+        function showNotFound() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('notFound').style.display = 'block';
+        }
+
+        function renderItem(item) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('breadcrumbTitle').textContent = item.title;
+            document.title = item.title + ' | ReFind';
+            const catName = item.category?.category_name || 'Other';
+            const posterName = item.poster?.full_name || 'Anonymous';
+            const user = getUser();
+            const isOwner = user && item.poster && user.user_id === item.poster.user_id;
+            document.getElementById('itemDetail').innerHTML = `
+                <div class="col-lg-6">
+                    ${item.photo_url ? `<img src="${item.photo_url}" class="item-photo" alt="${item.title}">` : `<div class="item-photo-placeholder">📦</div>`}
+                </div>
+                <div class="col-lg-6">
+                    <div class="detail-card">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <span class="badge status-${item.status} px-3 py-2 fs-6">${item.status.toUpperCase()}</span>
+                            <span class="text-muted small fw-bold">${catName}</span>
+                        </div>
+                        <h1 class="fw-bold mb-4" style="font-size:1.8rem;">${item.title}</h1>
+                        <div class="mb-4">
+                            <div class="meta-row"><span class="meta-icon">📍</span><span class="meta-label">Location</span><span>${item.location_found}</span></div>
+                            <div class="meta-row"><span class="meta-icon">📅</span><span class="meta-label">Date</span><span>${item.date_reported}</span></div>
+                            <div class="meta-row"><span class="meta-icon">🏷️</span><span class="meta-label">Category</span><span>${catName}</span></div>
+                        </div>
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-muted text-uppercase mb-2" style="font-size:0.8rem;">Description</h6>
+                            <p style="line-height:1.7;color:#495057;">${item.description || 'No description provided.'}</p>
+                        </div>
+                        <div class="poster-card">
+                            <h6 class="fw-bold text-muted text-uppercase mb-3" style="font-size:0.8rem;">Posted by</h6>
+                            <div class="d-flex align-items-center gap-3">
+                                <div style="width:44px;height:44px;border-radius:50%;background:#002045;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;">${posterName.charAt(0)}</div>
+                                <div><div class="fw-bold">${posterName}</div><div class="text-muted small">King's College Nepal</div></div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3 mt-4">
+                            ${item.status !== 'resolved' ? `
+                                <button class="btn btn-primary flex-fill rounded-3 py-3 fw-bold" data-bs-toggle="modal" data-bs-target="#contactModal">📩 Contact Poster</button>
+                                ${isOwner ? `<button class="btn btn-outline-success flex-fill rounded-3 py-3 fw-bold" onclick="markResolved(${item.item_id})">✓ Mark Resolved</button>` : ''}
+                            ` : `<div class="alert alert-success w-100 text-center fw-bold mb-0 rounded-3">✅ This item has been resolved</div>`}
+                        </div>
+                        <a href="listings.html" class="btn btn-link text-muted mt-3 d-block text-center text-decoration-none">← Back to all items</a>
+                    </div>
+                </div>`;
+            document.getElementById('itemDetail').style.display = 'flex';
+        }
+
+        async function markResolved(id) {
+            if (!confirm('Mark this item as resolved?')) return;
+            try { await updateItemStatus(id, 'resolved'); location.reload(); }
+            catch (e) { alert(e.message); }
+        }
+
+        function sendContact() {
+            bootstrap.Modal.getInstance(document.getElementById('contactModal')).hide();
+            setTimeout(() => alert('Message sent!'), 300);
+        }
+    </script>
+</body>
+</html>

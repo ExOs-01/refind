@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Posts | ReFind</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Manrope', sans-serif; background-color: #f8f9fa; }
+        .navbar { background-color: #002045 !important; }
+        .page-header { background: linear-gradient(135deg, #002045 0%, #004a8d 100%); color: white; padding: 50px 0; }
+        .card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.06); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-3px); }
+        .card-img-top { height: 180px; object-fit: cover; }
+        .card-img-placeholder { height: 180px; background: linear-gradient(135deg, #e9ecef, #dee2e6); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; }
+        .status-lost { background-color: #e63946; color: white; }
+        .status-found { background-color: #28a745; color: white; }
+        .status-resolved { background-color: #6c757d; color: white; }
+        .badge-wrap { position: absolute; top: 12px; left: 12px; }
+        .empty-state { text-align: center; padding: 80px 20px; color: #6c757d; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-3" href="index.html">ReFind</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="listings.html">Browse Items</a></li>
+                    <li class="nav-item"><a class="nav-link" href="post-item.html">Post Item</a></li>
+                    <li class="nav-item ms-lg-3">
+                        <a class="btn btn-outline-light rounded-pill px-4" id="navLoginBtn" href="auth.html">Login</a>
+                        <div id="navUserMenu" style="display:none;">
+                            <button class="btn btn-outline-danger rounded-pill px-3" onclick="logout()">Logout</button>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page-header">
+        <div class="container">
+            <h1 class="fw-bold mb-1">My Posts</h1>
+            <p class="opacity-75 mb-0" id="userGreeting">Your item reports</p>
+        </div>
+    </div>
+
+    <section class="py-5">
+        <div class="container">
+
+            <!-- Not logged in -->
+            <div id="loginWarning" style="display:none;" class="text-center py-5">
+                <div style="font-size:4rem;">🔒</div>
+                <h3 class="fw-bold mt-3">Please log in first</h3>
+                <p class="text-muted">You need an account to view your posts.</p>
+                <a href="auth.html" class="btn btn-primary rounded-pill px-5 mt-2">Login / Signup</a>
+            </div>
+
+            <!-- Loading -->
+            <div id="loadingState" class="text-center py-5" style="display:none;">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-3 text-muted">Loading your posts...</p>
+            </div>
+
+            <!-- Filter tabs -->
+            <div id="filterRow" class="d-flex gap-2 mb-4 flex-wrap" style="display:none !important;">
+                <button class="btn btn-primary rounded-pill px-4 fw-bold" id="f-all" onclick="filterPosts('all')">All</button>
+                <button class="btn btn-outline-danger rounded-pill px-4 fw-bold" id="f-lost" onclick="filterPosts('lost')">Lost</button>
+                <button class="btn btn-outline-success rounded-pill px-4 fw-bold" id="f-found" onclick="filterPosts('found')">Found</button>
+                <button class="btn btn-outline-secondary rounded-pill px-4 fw-bold" id="f-resolved" onclick="filterPosts('resolved')">Resolved</button>
+                <a href="post-item.html" class="btn btn-outline-primary rounded-pill px-4 fw-bold ms-auto">+ New Post</a>
+            </div>
+
+            <!-- Items grid -->
+            <div class="row g-4" id="myPostsGrid"></div>
+
+            <!-- Empty state -->
+            <div id="emptyState" class="empty-state" style="display:none;">
+                <div style="font-size:4rem;">📭</div>
+                <h4 class="fw-bold mt-3">No posts yet</h4>
+                <p>You haven't reported any items yet.</p>
+                <a href="post-item.html" class="btn btn-primary rounded-pill px-5 mt-2">Post Your First Item</a>
+            </div>
+
+        </div>
+    </section>
+
+    <footer class="py-5 bg-dark text-white mt-3">
+        <div class="container text-center">
+            <h4 class="fw-bold mb-2">ReFind</h4>
+            <p class="opacity-50 small">© 2026 King's College Nepal. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="api.js"></script>
+    <script>
+        let myPosts = [];
+        let currentFilter = 'all';
+
+        window.onload = async function () {
+            updateNavbar();
+
+            if (!isLoggedIn()) {
+                document.getElementById('loginWarning').style.display = 'block';
+                return;
+            }
+
+            const user = getUser();
+            document.getElementById('userGreeting').textContent = `Logged in as ${user.full_name}`;
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('filterRow').style.display = 'flex';
+
+            try {
+                const data = await getMyPosts();
+                myPosts = data.items || [];
+                renderPosts(myPosts);
+            } catch (e) {
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('emptyState').innerHTML = '<div style="font-size:4rem;">⚠️</div><h4 class="fw-bold mt-3">Could not load posts</h4><p>' + e.message + '</p>';
+            }
+        };
+
+        function filterPosts(status) {
+            currentFilter = status;
+            ['all','lost','found','resolved'].forEach(s => {
+                const btn = document.getElementById('f-' + s);
+                btn.className = btn.className.replace(/btn-\w+(?= rounded)/, s === status
+                    ? (s === 'lost' ? 'btn-danger' : s === 'found' ? 'btn-success' : s === 'resolved' ? 'btn-secondary' : 'btn-primary')
+                    : (s === 'lost' ? 'btn-outline-danger' : s === 'found' ? 'btn-outline-success' : s === 'resolved' ? 'btn-outline-secondary' : 'btn-outline-primary')
+                );
+            });
+            const filtered = status === 'all' ? myPosts : myPosts.filter(i => i.status === status);
+            renderPosts(filtered);
+        }
+
+        function renderPosts(items) {
+            document.getElementById('loadingState').style.display = 'none';
+            const grid = document.getElementById('myPostsGrid');
+            const empty = document.getElementById('emptyState');
+
+            if (items.length === 0) {
+                grid.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+
+            grid.innerHTML = items.map(item => `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100">
+                        <div class="position-relative">
+                            ${item.photo_url
+                                ? `<img src="${item.photo_url}" class="card-img-top" alt="${item.title}">`
+                                : `<div class="card-img-placeholder">📦</div>`
+                            }
+                            <div class="badge-wrap"><span class="badge status-${item.status}">${item.status.toUpperCase()}</span></div>
+                        </div>
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-1">${item.title}</h5>
+                            <p class="text-muted small mb-1">📍 ${item.location_found}</p>
+                            <p class="text-muted small mb-3">📅 ${item.date_reported}</p>
+                            <p class="text-truncate mb-0" style="color:#495057;">${item.description || ''}</p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0 px-4 pb-4 d-flex gap-2">
+                            <a href="item.html?id=${item.item_id}" class="btn btn-outline-primary rounded-pill flex-fill fw-bold">View</a>
+                            ${item.status !== 'resolved'
+                                ? `<button class="btn btn-outline-success rounded-pill flex-fill fw-bold" onclick="markResolved(${item.item_id})">✓ Resolved</button>`
+                                : `<button class="btn btn-outline-secondary rounded-pill flex-fill fw-bold" disabled>Resolved</button>`
+                            }
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+
+        async function markResolved(id) {
+            if (!confirm('Mark this item as resolved?')) return;
+            try {
+                await updateItemStatus(id, 'resolved');
+                const data = await getMyPosts();
+                myPosts = data.items || [];
+                filterPosts(currentFilter);
+            } catch (e) {
+                alert('Could not update: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

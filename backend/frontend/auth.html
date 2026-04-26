@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Signup | ReFind</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Manrope', sans-serif; background: linear-gradient(135deg, #002045 0%, #004a8d 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .auth-container { max-width: 450px; width: 100%; background: white; padding: 40px; border-radius: 25px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .btn-primary { background-color: #002045; border-color: #002045; padding: 12px; font-weight: bold; border-radius: 10px; }
+        .btn-warning { background-color: #ffc107; border-color: #ffc107; padding: 12px; font-weight: bold; border-radius: 10px; color: #000; }
+        .nav-pills .nav-link { color: #002045; font-weight: bold; border-radius: 10px; padding: 10px 15px; font-size: 0.9rem; }
+        .nav-pills .nav-link.active { background-color: #002045; color: white; }
+        .nav-pills .nav-link.admin-tab { color: #856404; }
+        .nav-pills .nav-link.admin-tab.active { background-color: #ffc107; color: #000; }
+        .form-control { padding: 12px; border-radius: 10px; border: 1px solid #dee2e6; }
+        .error-message { color: #dc3545; font-size: 0.875rem; margin-top: 5px; display: none; }
+        .admin-badge { background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px; padding: 12px; text-align: center; margin-bottom: 20px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="text-center mb-4">
+            <a href="index.html" class="text-decoration-none">
+                <h1 class="fw-bold text-primary mb-0">ReFind</h1>
+            </a>
+            <p class="text-muted">King's College Nepal</p>
+        </div>
+
+        <div id="apiError" class="alert alert-danger" style="display:none;"></div>
+
+        <ul class="nav nav-pills nav-justified mb-4" id="authTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="login-tab" data-bs-toggle="pill" data-bs-target="#login" type="button">Login</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="signup-tab" data-bs-toggle="pill" data-bs-target="#signup" type="button">Signup</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link admin-tab" id="admin-tab" data-bs-toggle="pill" data-bs-target="#adminLogin" type="button">🔑 Admin</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+
+            <!-- Login Tab -->
+            <div class="tab-pane fade show active" id="login">
+                <form onsubmit="handleLogin(event)">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email Address</label>
+                        <input type="email" class="form-control" id="loginEmail" placeholder="name@college.edu" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Password</label>
+                        <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="loginBtn">Login to Account</button>
+                </form>
+            </div>
+
+            <!-- Signup Tab -->
+            <div class="tab-pane fade" id="signup">
+                <form onsubmit="handleSignup(event)">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Full Name</label>
+                        <input type="text" class="form-control" id="signupName" placeholder="Your full name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Email Address</label>
+                        <input type="email" class="form-control" id="signupEmail" placeholder="name@college.edu" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Phone Number <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="tel" class="form-control" id="signupPhone" placeholder="98XXXXXXXX">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Create Password</label>
+                        <input type="password" id="signupPassword" class="form-control" placeholder="Min. 6 characters" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Confirm Password</label>
+                        <input type="password" id="confirmPassword" class="form-control" placeholder="••••••••" required>
+                        <div id="passwordError" class="error-message">Passwords do not match!</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="signupBtn">Create Account</button>
+                </form>
+            </div>
+
+            <!-- Admin Login Tab -->
+            <div class="tab-pane fade" id="adminLogin">
+                <div class="admin-badge">
+                    🔐 This login is for authorized administrators only.
+                </div>
+                <form onsubmit="handleAdminLogin(event)">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Admin Email</label>
+                        <input type="email" class="form-control" id="adminEmail" placeholder="admin@college.edu" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Admin Password</label>
+                        <input type="password" class="form-control" id="adminPassword" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100" id="adminLoginBtn">Login as Admin</button>
+                </form>
+            </div>
+
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="index.html" class="small text-decoration-none text-muted">← Back to Home</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="api.js"></script>
+    <script>
+        window.onload = function () {
+            if (isLoggedIn()) window.location.href = 'index.html';
+
+            const pw = document.getElementById('signupPassword');
+            const cpw = document.getElementById('confirmPassword');
+            const err = document.getElementById('passwordError');
+            function check() { err.style.display = cpw.value.length > 0 && pw.value !== cpw.value ? 'block' : 'none'; }
+            pw.addEventListener('input', check);
+            cpw.addEventListener('input', check);
+        };
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const errorDiv = document.getElementById('apiError');
+            errorDiv.style.display = 'none';
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Logging in...';
+            try {
+                await login(
+                    document.getElementById('loginEmail').value,
+                    document.getElementById('loginPassword').value
+                );
+                window.location.href = 'index.html';
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Login to Account';
+            }
+        }
+
+        async function handleSignup(event) {
+            event.preventDefault();
+            const pw = document.getElementById('signupPassword').value;
+            const cpw = document.getElementById('confirmPassword').value;
+            if (pw !== cpw) { document.getElementById('passwordError').style.display = 'block'; return; }
+
+            const btn = document.getElementById('signupBtn');
+            const errorDiv = document.getElementById('apiError');
+            errorDiv.style.display = 'none';
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating account...';
+            try {
+                await register(
+                    document.getElementById('signupName').value,
+                    document.getElementById('signupEmail').value,
+                    pw,
+                    document.getElementById('signupPhone').value
+                );
+                window.location.href = 'index.html';
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Create Account';
+            }
+        }
+
+        async function handleAdminLogin(event) {
+            event.preventDefault();
+            const btn = document.getElementById('adminLoginBtn');
+            const errorDiv = document.getElementById('apiError');
+            errorDiv.style.display = 'none';
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+            try {
+                const data = await login(
+                    document.getElementById('adminEmail').value,
+                    document.getElementById('adminPassword').value
+                );
+                if (data.user.role !== 'admin') {
+                    clearAuth();
+                    throw new Error('This account does not have admin access.');
+                }
+                window.location.href = 'admin.html';
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Login as Admin';
+            }
+        }
+    </script>
+</body>
+</html>

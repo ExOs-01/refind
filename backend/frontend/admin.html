@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | ReFind</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Manrope', sans-serif; background-color: #f8f9fa; }
+        .navbar { background-color: #002045 !important; }
+        .admin-card { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: none; }
+        .sidebar { background: white; border-radius: 15px; padding: 20px; height: fit-content; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .table th { background-color: #002045; color: white; }
+        .status-lost { background-color: #e63946; color: white; }
+        .status-found { background-color: #28a745; color: white; }
+        .status-resolved { background-color: #6c757d; color: white; }
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-3" href="index.html">ReFind Admin</a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-light small">Welcome, <strong id="adminName">Admin</strong></span>
+                <button onclick="handleLogout()" class="btn btn-outline-light btn-sm rounded-pill">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <!-- Not admin warning -->
+        <div id="notAdminWarning" style="display:none;" class="alert alert-danger text-center">
+            ⛔ Admin access required. <a href="auth.html">Login as admin</a>.
+        </div>
+
+        <div id="adminContent">
+            <div class="row">
+                <div class="col-lg-3 mb-4">
+                    <div class="sidebar">
+                        <h5 class="fw-bold mb-4">Admin Tools</h5>
+                        <div class="list-group list-group-flush">
+                            <button class="list-group-item list-group-item-action fw-bold" onclick="showSection('dashboard')">📊 Dashboard</button>
+                            <button class="list-group-item list-group-item-action fw-bold" onclick="showSection('allItems')">📋 All Items</button>
+                            <button class="list-group-item list-group-item-action fw-bold" onclick="showSection('addItem')">➕ Add New Item</button>
+                            <button class="list-group-item list-group-item-action fw-bold" onclick="showSection('categories')">🏷️ Categories</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-9">
+                    <!-- Dashboard -->
+                    <div id="dashboard" class="admin-section active">
+                        <h2 class="fw-bold mb-4">Dashboard</h2>
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-4"><div class="admin-card card p-4 text-center"><h3 class="fw-bold text-primary" id="statTotal">—</h3><p class="mb-0 text-muted">Total Items</p></div></div>
+                            <div class="col-md-4"><div class="admin-card card p-4 text-center"><h3 class="fw-bold text-danger" id="statLost">—</h3><p class="mb-0 text-muted">Lost Items</p></div></div>
+                            <div class="col-md-4"><div class="admin-card card p-4 text-center"><h3 class="fw-bold text-success" id="statFound">—</h3><p class="mb-0 text-muted">Found Items</p></div></div>
+                        </div>
+                        <div class="admin-card card p-4">
+                            <h5 class="fw-bold mb-3">Recent Activity</h5>
+                            <div id="recentActivity"><div class="text-muted">Loading...</div></div>
+                        </div>
+                    </div>
+
+                    <!-- All Items -->
+                    <div id="allItems" class="admin-section">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="fw-bold mb-0">All Items</h2>
+                            <input type="text" class="form-control w-auto" placeholder="Search items..." id="adminSearch" oninput="filterAdminTable()">
+                        </div>
+                        <div id="adminError" class="alert alert-danger" style="display:none;"></div>
+                        <div class="table-responsive admin-card card p-3">
+                            <table class="table table-hover mb-0" id="itemsTable">
+                                <thead><tr><th>Title</th><th>Status</th><th>Category</th><th>Location</th><th>Date</th><th>Actions</th></tr></thead>
+                                <tbody id="tableBody"><tr><td colspan="6" class="text-center text-muted py-4">Loading...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Add New Item -->
+                    <div id="addItem" class="admin-section">
+                        <h2 class="fw-bold mb-4">Add New Item</h2>
+                        <div id="addItemError" class="alert alert-danger" style="display:none;"></div>
+                        <div id="addItemSuccess" class="alert alert-success" style="display:none;"></div>
+                        <div class="admin-card card p-4">
+                            <form id="addItemForm" onsubmit="handleAddItem(event)">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label fw-bold small">Status</label>
+                                        <select class="form-select" id="newStatus" required>
+                                            <option value="lost">Lost</option>
+                                            <option value="found">Found</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label fw-bold small">Category</label>
+                                        <select class="form-select" id="newCategory" required></select>
+                                    </div>
+                                </div>
+                                <div class="mb-3"><label class="form-label fw-bold small">Item Title</label><input type="text" class="form-control" id="newTitle" required></div>
+                                <div class="mb-3"><label class="form-label fw-bold small">Date</label><input type="date" class="form-control" id="newDate" required></div>
+                                <div class="mb-3"><label class="form-label fw-bold small">Location</label><input type="text" class="form-control" id="newLocation" required></div>
+                                <div class="mb-4"><label class="form-label fw-bold small">Description</label><textarea class="form-control" id="newDescription" rows="4" required></textarea></div>
+                                <div class="mb-4"><label class="form-label fw-bold small">Photo (optional)</label><input type="file" class="form-control" id="newPhoto" accept="image/*"></div>
+                                <button type="submit" class="btn btn-primary w-100 fw-bold" id="addItemBtn" style="background:#002045;border-color:#002045;">Add Item</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div id="categories" class="admin-section">
+                        <h2 class="fw-bold mb-4">Manage Categories</h2>
+                        <div class="admin-card card p-4 mb-4">
+                            <div class="d-flex gap-3">
+                                <input type="text" class="form-control" id="newCategoryName" placeholder="New category name">
+                                <button class="btn btn-primary fw-bold px-4" style="background:#002045;border-color:#002045;white-space:nowrap;" onclick="addCategory()">Add Category</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive admin-card card p-3">
+                            <table class="table mb-0">
+                                <thead><tr class="table-dark"><th>ID</th><th>Category Name</th><th>Actions</th></tr></thead>
+                                <tbody id="categoriesBody"><tr><td colspan="3" class="text-center text-muted">Loading...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="api.js"></script>
+    <script>
+        let allItems = [];
+
+        window.onload = async function () {
+            // Check admin access
+            if (!isLoggedIn() || !isAdmin()) {
+                document.getElementById('notAdminWarning').style.display = 'block';
+                document.getElementById('adminContent').style.display = 'none';
+                return;
+            }
+            const user = getUser();
+            document.getElementById('adminName').textContent = user.full_name;
+            await loadDashboard();
+            await loadCategoryOptions();
+        };
+
+        function showSection(section) {
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(section).classList.add('active');
+            document.querySelectorAll('.list-group-item').forEach(b => b.classList.remove('active'));
+            if (section === 'allItems') loadAllItems();
+            if (section === 'categories') loadCategories();
+        }
+
+        async function loadDashboard() {
+            try {
+                const data = await getItems({});
+                allItems = data.items || [];
+                document.getElementById('statTotal').textContent = allItems.length;
+                document.getElementById('statLost').textContent = allItems.filter(i => i.status === 'lost').length;
+                document.getElementById('statFound').textContent = allItems.filter(i => i.status === 'found').length;
+
+                const recent = allItems.slice(0, 5);
+                document.getElementById('recentActivity').innerHTML = recent.length === 0
+                    ? '<p class="text-muted">No items yet.</p>'
+                    : recent.map(item => `
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <div>
+                                <strong>${item.title}</strong>
+                                <span class="text-muted small ms-2">— ${item.location_found}</span>
+                            </div>
+                            <span class="badge status-${item.status}">${item.status.toUpperCase()}</span>
+                        </div>`).join('');
+            } catch (e) {
+                console.error('Dashboard load error', e);
+            }
+        }
+
+        async function loadAllItems() {
+            try {
+                const data = await getItems({});
+                allItems = data.items || [];
+                renderTable(allItems);
+            } catch (e) {
+                document.getElementById('tableBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">Could not load items.</td></tr>`;
+            }
+        }
+
+        function renderTable(items) {
+            const tbody = document.getElementById('tableBody');
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No items found.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = items.map(item => `
+                <tr>
+                    <td><strong>${item.title}</strong></td>
+                    <td><span class="badge status-${item.status}">${item.status.toUpperCase()}</span></td>
+                    <td>${item.category?.category_name || '—'}</td>
+                    <td>${item.location_found}</td>
+                    <td>${item.date_reported}</td>
+                    <td>
+                        <select class="form-select form-select-sm d-inline-block w-auto me-2" onchange="changeStatus(${item.item_id}, this.value)">
+                            <option value="lost" ${item.status === 'lost' ? 'selected' : ''}>Lost</option>
+                            <option value="found" ${item.status === 'found' ? 'selected' : ''}>Found</option>
+                            <option value="resolved" ${item.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-danger" onclick="handleDelete(${item.item_id})">Delete</button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function filterAdminTable() {
+            const q = document.getElementById('adminSearch').value.toLowerCase();
+            const filtered = allItems.filter(i =>
+                i.title.toLowerCase().includes(q) ||
+                i.location_found.toLowerCase().includes(q) ||
+                (i.category?.category_name || '').toLowerCase().includes(q)
+            );
+            renderTable(filtered);
+        }
+
+        async function changeStatus(id, status) {
+            try {
+                await updateItemStatus(id, status);
+            } catch (e) {
+                alert('Could not update status: ' + e.message);
+                loadAllItems();
+            }
+        }
+
+        async function handleDelete(id) {
+            if (!confirm('Permanently delete this item?')) return;
+            try {
+                await deleteItem(id);
+                loadAllItems();
+                loadDashboard();
+            } catch (e) {
+                alert('Could not delete: ' + e.message);
+            }
+        }
+
+        async function loadCategoryOptions() {
+            try {
+                const data = await getCategories();
+                const sel = document.getElementById('newCategory');
+                sel.innerHTML = '';
+                data.categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.category_id;
+                    opt.textContent = cat.category_name;
+                    sel.appendChild(opt);
+                });
+            } catch (e) { console.error('Could not load categories'); }
+        }
+
+        async function loadCategories() {
+            try {
+                const data = await getCategories();
+                document.getElementById('categoriesBody').innerHTML = data.categories.map(cat => `
+                    <tr>
+                        <td>${cat.category_id}</td>
+                        <td>${cat.category_name}</td>
+                        <td><button class="btn btn-sm btn-outline-danger" onclick="handleDeleteCategory(${cat.category_id})">Delete</button></td>
+                    </tr>`).join('');
+            } catch (e) {
+                document.getElementById('categoriesBody').innerHTML = '<tr><td colspan="3" class="text-danger">Could not load.</td></tr>';
+            }
+        }
+
+        async function addCategory() {
+            const name = document.getElementById('newCategoryName').value.trim();
+            if (!name) return;
+            try {
+                await apiFetch('/categories', { method: 'POST', body: JSON.stringify({ category_name: name }) });
+                document.getElementById('newCategoryName').value = '';
+                loadCategories();
+                loadCategoryOptions();
+            } catch (e) { alert(e.message); }
+        }
+
+        async function handleDeleteCategory(id) {
+            if (!confirm('Delete this category?')) return;
+            try {
+                await apiFetch(`/categories/${id}`, { method: 'DELETE' });
+                loadCategories();
+            } catch (e) { alert(e.message); }
+        }
+
+        async function handleAddItem(e) {
+            e.preventDefault();
+            const btn = document.getElementById('addItemBtn');
+            const errDiv = document.getElementById('addItemError');
+            const sucDiv = document.getElementById('addItemSuccess');
+            errDiv.style.display = 'none';
+            sucDiv.style.display = 'none';
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
+
+            try {
+                const formData = new FormData();
+                formData.append('title', document.getElementById('newTitle').value);
+                formData.append('status', document.getElementById('newStatus').value);
+                formData.append('category_id', document.getElementById('newCategory').value);
+                formData.append('location_found', document.getElementById('newLocation').value);
+                formData.append('date_reported', document.getElementById('newDate').value);
+                formData.append('description', document.getElementById('newDescription').value);
+                const photo = document.getElementById('newPhoto').files[0];
+                if (photo) formData.append('photo', photo);
+
+                await postItem(formData);
+                sucDiv.textContent = 'Item added successfully!';
+                sucDiv.style.display = 'block';
+                document.getElementById('addItemForm').reset();
+                loadDashboard();
+            } catch (e) {
+                errDiv.textContent = e.message;
+                errDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Add Item';
+            }
+        }
+
+        function handleLogout() {
+            if (confirm('Logout from Admin panel?')) logout();
+        }
+    </script>
+</body>
+</html>
